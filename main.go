@@ -11,11 +11,12 @@ func main() {
 	cfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 	}
-	mux.Handle("/app", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(dir))))
+	mux.Handle("/app/", cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(dir))))
 
-	mux.HandleFunc("/healthz", customHandler)
-	mux.HandleFunc("/metrics", cfg.middlewareMetricsGet())
-	mux.HandleFunc("/reset", cfg.middlewareMetricsReset(resetHandler))
+	mux.HandleFunc("GET /api/healthz", customHandler)
+	mux.HandleFunc("GET /admin/metrics", cfg.middlewareMetricsGet())
+	mux.HandleFunc("POST /admin/reset", cfg.middlewareMetricsReset(resetHandler))
+	mux.HandleFunc("POST /api/validate_chirp", validateChirpHandler)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
