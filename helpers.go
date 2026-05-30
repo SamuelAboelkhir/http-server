@@ -48,3 +48,19 @@ func checkForProfanity(body string) string {
 	}
 	return strings.Join(words, " ")
 }
+
+func validateChirpHandler(w http.ResponseWriter, payload string) bool {
+	type requestMsg struct {
+		Body string `json:"body"`
+	}
+	type response struct {
+		CleanedBody string `json:"cleaned_body"`
+	}
+
+	if len(payload) > 140 {
+		respondWithError(w, http.StatusBadRequest, "A chirp can't be longer than 140 characters", nil)
+		return false
+	}
+
+	return true
+}

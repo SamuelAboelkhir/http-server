@@ -89,3 +89,46 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 		Email:     createdUser.Email,
 	})
 }
+
+func (cfg *apiConfig) chirps(w http.ResponseWriter, r *http.Request) {
+	type requestMsg struct {
+		Body   string    `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
+	}
+
+	type response struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body      string    `json:"body"`
+		UserID    uuid.UUID `json:"user_id"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	request := requestMsg{}
+	err := decoder.Decode(&request)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode the request", err)
+		return
+	}
+
+	isValid := validateChirpHandler(w, request.Body)
+
+	if isValid {
+		createdChirp, err := cfg.CreateChirp(r.Context(), database.CreateChirpParams{
+			Body:   request.Body,
+			UserID: request.UserID,
+		})
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to create chirp", err)
+		}
+
+		respondWithJSON(w, http.StatusCreated, response{
+			ID:        createdChirp.ID,
+			CreatedAt: createdChirp.CreatedAt,
+			UpdatedAt: createdChirp.UpdatedAt,
+			Body:      createdChirp.Body,
+			UserID:    createdChirp.UserID,
+		})
+	}
+}
