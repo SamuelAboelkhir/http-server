@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -49,18 +50,12 @@ func checkForProfanity(body string) string {
 	return strings.Join(words, " ")
 }
 
-func validateChirpHandler(w http.ResponseWriter, payload string) bool {
-	type requestMsg struct {
-		Body string `json:"body"`
-	}
-	type response struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
-
+func validateChirp(payload string) (string, error) {
 	if len(payload) > 140 {
-		respondWithError(w, http.StatusBadRequest, "A chirp can't be longer than 140 characters", nil)
-		return false
+		return "", errors.New("a chirp can't be longer than 140 characters")
 	}
 
-	return true
+	cleaned := checkForProfanity(payload)
+
+	return cleaned, nil
 }
