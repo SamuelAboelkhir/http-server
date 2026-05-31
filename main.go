@@ -37,6 +37,7 @@ func main() {
 	mux.HandleFunc("POST /api/users", cfg.createUserHandler)
 	mux.HandleFunc("POST /api/chirps", cfg.createChirps)
 	mux.HandleFunc("GET /api/chirps", cfg.fetchChirps)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.fetchSingleChirps)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
