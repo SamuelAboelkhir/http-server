@@ -17,7 +17,7 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) createChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	type requestMsg struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -54,7 +54,7 @@ func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (cfg *apiConfig) fetchChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) fetchChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	res := []Chirp{}
 
 	chirps, err := cfg.GetChirps(r.Context())
@@ -76,7 +76,7 @@ func (cfg *apiConfig) fetchChirps(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, res)
 }
 
-func (cfg *apiConfig) fetchSingleChirps(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) fetchSingleChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	uuidFromString, err := uuid.Parse(r.PathValue("chirpID"))
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)

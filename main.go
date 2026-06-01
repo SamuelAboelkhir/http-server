@@ -35,9 +35,10 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", cfg.middlewareMetricsGet())
 	mux.HandleFunc("POST /admin/reset", cfg.middlewareMetricsReset(resetHandler))
 	mux.HandleFunc("POST /api/users", cfg.createUserHandler)
-	mux.HandleFunc("POST /api/chirps", cfg.createChirps)
-	mux.HandleFunc("GET /api/chirps", cfg.fetchChirps)
-	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.fetchSingleChirps)
+	mux.HandleFunc("POST /api/login", cfg.loginHandler)
+	mux.HandleFunc("POST /api/chirps", cfg.createChirpsHandler)
+	mux.HandleFunc("GET /api/chirps", cfg.fetchChirpsHandler)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.fetchSingleChirpsHandler)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
