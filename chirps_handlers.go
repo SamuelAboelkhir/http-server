@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SamuelAboelkhir/http-server/internal/auth"
 	"github.com/SamuelAboelkhir/http-server/internal/database"
 	"github.com/google/uuid"
 )
@@ -17,17 +18,29 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *apiConfig) createChirpsHandler(w http.ResponseWriter, r *http.Request) {
-	type requestMsg struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
-	}
+type requestMsg struct {
+	Body   string    `json:"body"`
+	UserID uuid.UUID `json:"user_id"`
+}
 
+func (cfg *apiConfig) createChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	request := requestMsg{}
 	err := decoder.Decode(&request)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode the request", err)
+		return
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrive authorization header", err)
+		return
+	}
+
+	userID, err := auth.ValidateJwt(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized access", err)
 		return
 	}
 
@@ -39,10 +52,11 @@ func (cfg *apiConfig) createChirpsHandler(w http.ResponseWriter, r *http.Request
 
 	createdChirp, err := cfg.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleaned,
-		UserID: request.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create chirp", err)
+		return
 	}
 
 	respondWithJSON(w, http.StatusCreated, Chirp{

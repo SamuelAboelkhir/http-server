@@ -16,11 +16,13 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
+	Token     string    `json:"token"`
 }
 
 type Credentials struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
 }
 
 func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,10 +59,18 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	request := Credentials{}
+	defaultExpiry := time.Hour
+	actualExpiry := defaultExpiry
 	err := decoder.Decode(&request)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode the request", err)
 		return
+	}
+
+	userExpiry := time.Duration(request.ExpiresInSeconds) * time.Second
+
+	if userExpiry < defaultExpiry && userExpiry != 0 {
+		actualExpiry = userExpiry
 	}
 
 	user, err := cfg.GetUser(r.Context(), request.Email)
@@ -76,11 +86,17 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if hashMatch {
+		token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, actualExpiry)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Couldn't create JWT token", err)
+			return
+		}
 		respondWithJSON(w, http.StatusOK, User{
 			ID:        user.ID,
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
+			Token:     token,
 		})
 	} else {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)

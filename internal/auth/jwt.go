@@ -19,8 +19,6 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 		return "", err
 	}
 
-	print(tokenString)
-
 	return tokenString, nil
 }
 
@@ -33,7 +31,7 @@ func ValidateJwt(tokenString, tokenSecret string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.UUID{}, err
 	}
-	print(token)
+
 	id, err := token.Claims.GetSubject()
 	if err != nil {
 		return uuid.UUID{}, err
