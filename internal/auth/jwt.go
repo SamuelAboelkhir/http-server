@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -38,4 +40,13 @@ func ValidateJwt(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 
 	return uuid.Parse(id)
+}
+
+func MakeRefreshToken() string {
+	refreshToken := make([]byte, 32)
+	rand.Read(refreshToken)
+
+	encodedToken := hex.EncodeToString(refreshToken)
+
+	return encodedToken
 }
