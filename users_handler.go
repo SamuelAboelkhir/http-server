@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -67,7 +66,7 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := cfg.GetUser(r.Context(), request.Email)
+	user, err := cfg.GetUserByEmail(r.Context(), request.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
@@ -111,76 +110,47 @@ func (cfg *apiConfig) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (cfg *apiConfig) refresh(w http.ResponseWriter, r *http.Request) {
-	refreshToken, err := auth.GetBearerToken(r.Header)
-	if refreshToken == "" {
-		respondWithError(w, http.StatusUnauthorized, "No refresh token provided", nil)
-		return
-	}
+func (cfg *apiConfig) updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "An error occured while attempting to retrieve the refresh token", nil)
+		respondWithError(w, http.StatusUnauthorized, "An error occured while attempting to retrieve the token", nil)
 		return
 	}
 
-	token, err := cfg.GetRefreshToken(r.Context(), refreshToken)
+	userID, err := auth.ValidateJwt(token, cfg.jwtSecret)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No refresh token found", nil)
+		respondWithError(w, http.StatusUnauthorized, "Failed to validate token", err)
 		return
 	}
 
-	if token.RevokedAt.Valid {
-		respondWithError(w, http.StatusUnauthorized, "Refresh token revoked", nil)
-		return
-	}
-
-	if token.ExpiresAt.Compare(time.Now()) == -1 {
-		respondWithError(w, http.StatusUnauthorized, "Refresh token expired", nil)
-		return
-	}
-
-	newAccessToken, err := auth.MakeJWT(token.UserID, cfg.jwtSecret, time.Hour)
+	decoder := json.NewDecoder(r.Body)
+	request := Credentials{}
+	err = decoder.Decode(&request)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create new access token", err)
-	}
-	respondWithJSON(
-		w, http.StatusOK, struct {
-			Token string `json:"token"`
-		}{
-			Token: newAccessToken,
-		},
-	)
-}
-
-func (cfg *apiConfig) revoke(w http.ResponseWriter, r *http.Request) {
-	refreshToken, err := auth.GetBearerToken(r.Header)
-	if refreshToken == "" {
-		respondWithError(w, http.StatusUnauthorized, "No refresh token provided", nil)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't decode the request", err)
 		return
 	}
+
+	hashedPassword, err := auth.HashPassword(request.Password)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "An error occured while attempting to retrieve the refresh token", nil)
+		respondWithError(w, http.StatusInternalServerError, "Failed to hash password", err)
 		return
 	}
 
-	token, err := cfg.GetRefreshToken(r.Context(), refreshToken)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "No refresh token found", nil)
-		return
-	}
-
-	if token.RevokedAt.Valid {
-		respondWithError(w, http.StatusUnauthorized, "Refresh token already revoked", nil)
-		return
-	}
-
-	cfg.RevokeRefreshToken(r.Context(), database.RevokeRefreshTokenParams{
-		RevokedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UpdatedAt: time.Now(),
-		Token:     token.Token,
+	user, err := cfg.UpdateEmailAndPassword(r.Context(), database.UpdateEmailAndPasswordParams{
+		ID:             userID,
+		Email:          request.Email,
+		HashedPassword: hashedPassword,
 	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to update user", err)
+		return
+	}
 
-	w.WriteHeader(http.StatusNoContent)
+	respondWithJSON(w, http.StatusOK, User{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
+	})
 }

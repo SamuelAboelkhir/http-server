@@ -37,13 +37,17 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", customHandler)
 	mux.HandleFunc("GET /admin/metrics", cfg.middlewareMetricsGet())
 	mux.HandleFunc("POST /admin/reset", cfg.middlewareMetricsReset(resetHandler))
+
 	mux.HandleFunc("POST /api/users", cfg.createUserHandler)
-	mux.HandleFunc("POST /api/login", cfg.loginHandler)
+	mux.HandleFunc("PUT /api/users", cfg.updateUserHandler)
+
 	mux.HandleFunc("POST /api/chirps", cfg.createChirpsHandler)
 	mux.HandleFunc("GET /api/chirps", cfg.fetchChirpsHandler)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.fetchSingleChirpsHandler)
-	mux.HandleFunc("POST /api/refresh", cfg.refresh)
-	mux.HandleFunc("POST /api/revoke", cfg.revoke)
+
+	mux.HandleFunc("POST /api/login", cfg.loginHandler)
+	mux.HandleFunc("POST /api/refresh", cfg.refreshHandler)
+	mux.HandleFunc("POST /api/revoke", cfg.revokeHandler)
 
 	httpServer := &http.Server{
 		Addr:    ":8080",
