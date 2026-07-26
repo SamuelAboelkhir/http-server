@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 	"net/http"
-	"strings"
 )
 
 func GetBearerToken(headers http.Header) (string, error) {
@@ -12,12 +11,10 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("authorization header is missing")
 	}
 
-	sanitized, state := strings.CutPrefix(tokenString, "Bearer")
-	if !state {
-		return "", errors.New("header malformed")
+	token, err := AuthHeaderSanitizer(tokenString, "Bearer")
+	if err != nil {
+		return "", err
 	}
 
-	trimed := strings.TrimSpace(sanitized)
-
-	return trimed, nil
+	return token, nil
 }
