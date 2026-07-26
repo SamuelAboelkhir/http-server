@@ -41,6 +41,8 @@ func main() {
 	mux.HandleFunc("POST /api/users", cfg.createUserHandler)
 	mux.HandleFunc("PUT /api/users", cfg.updateUserHandler)
 
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.polkaWebhooksHandler)
+
 	mux.HandleFunc("POST /api/chirps", cfg.createChirpsHandler)
 	mux.HandleFunc("GET /api/chirps", cfg.fetchChirpsHandler)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.fetchSingleChirpsHandler)
