@@ -69,7 +69,34 @@ func (cfg *apiConfig) createChirpsHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (cfg *apiConfig) fetchChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	authorID := r.URL.Query().Get("author_id")
 	res := []Chirp{}
+	if authorID != "" {
+		parsedID, err := uuid.Parse(r.URL.Query().Get("author_id"))
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Invalid author ID", err)
+			return
+		}
+
+		chirps, err := cfg.GetChirpsById(r.Context(), parsedID)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to fetch chirps", err)
+			return
+		}
+
+		for _, chirp := range chirps {
+			res = append(res, Chirp{
+				ID:        chirp.ID,
+				CreatedAt: chirp.CreatedAt,
+				UpdatedAt: chirp.UpdatedAt,
+				Body:      chirp.Body,
+				UserID:    chirp.UserID,
+			})
+		}
+
+		respondWithJSON(w, http.StatusOK, res)
+		return
+	}
 
 	chirps, err := cfg.GetChirps(r.Context())
 	if err != nil {
