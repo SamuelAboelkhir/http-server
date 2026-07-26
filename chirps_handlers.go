@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/SamuelAboelkhir/http-server/internal/auth"
@@ -112,6 +113,12 @@ func (cfg *apiConfig) fetchChirpsHandler(w http.ResponseWriter, r *http.Request)
 			Body:      chirp.Body,
 			UserID:    chirp.UserID,
 		})
+	}
+
+	sorting := r.URL.Query().Get("sort")
+
+	if sorting == "desc" {
+		sort.Slice(res, func(i, j int) bool { return res[i].CreatedAt.After(res[j].CreatedAt) })
 	}
 
 	respondWithJSON(w, http.StatusOK, res)
