@@ -113,3 +113,42 @@ func (cfg *apiConfig) fetchSingleChirpsHandler(w http.ResponseWriter, r *http.Re
 
 	respondWithJSON(w, http.StatusOK, res)
 }
+
+func (cfg *apiConfig) deleteChirpHandler(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Failed to retrieve access token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJwt(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Failed to validate access token", err)
+		return
+	}
+
+	uuidFromString, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)
+		return
+	}
+
+	chirp, err := cfg.GetChirp(r.Context(), uuidFromString)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Chirp not found", err)
+		return
+	}
+
+	if chirp.UserID != userID {
+		respondWithError(w, http.StatusForbidden, "User isn't the author of this chirp", err)
+		return
+	}
+
+	err = cfg.DeleteChirpById(r.Context(), chirp.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to delete chirp", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, "")
+}
